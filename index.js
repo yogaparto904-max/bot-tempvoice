@@ -79,11 +79,11 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
       parent: CATEGORY_ID
     });
 
-    //const txt = await newState.guild.channels.create({
-      //name: `chat-${newState.member.user.username}`,
-      //type: ChannelType.GuildText,
-      //parent: CATEGORY_ID
-    //});
+    const txt = await newState.guild.channels.create({
+      name: `chat-${newState.member.user.username}`,
+      type: ChannelType.GuildText,
+      parent: CATEGORY_ID
+    });
 
     owners.set(vc.id, newState.member.id);
     textChannels.set(vc.id, txt.id);
