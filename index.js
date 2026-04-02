@@ -31,21 +31,47 @@ const owners = new Map();
 // ===== PANEL =====
 function getPanel() {
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('name').setEmoji('🎚️').setLabel('RENAME').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('limit').setEmoji('👥').setLabel('LIMIT').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('lock').setEmoji('🔒').setLabel('LOCK').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('unlock').setEmoji('🔓').setLabel('UNLOCK').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('region').setEmoji('🌍').setLabel('REGION').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId('name')
+      .setEmoji({ name: "rn", id: "1489177109711818823" })
+      .setLabel('RENAME')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder().setCustomId('limit')
+      .setEmoji({ name: "lim", id: "1489177299969380404" })
+      .setLabel('LIMIT')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder().setCustomId('lock')
+      .setEmoji({ name: "lc", id: "1489177237277249536" })
+      .setLabel('LOCK')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder().setCustomId('unlock')
+      .setEmoji({ name: "op", id: "1489177192490598430" })
+      .setLabel('UNLOCK')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder().setCustomId('region')
+      .setEmoji({ name: "gl", id: "1489177019311984660" })
+      .setLabel('REGION')
+      .setStyle(ButtonStyle.Secondary)
   );
 
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('claim').setEmoji('👑').setLabel('CLAIM').setStyle(ButtonStyle.Primary)
+    new ButtonBuilder().setCustomId('claim')
+      .setEmoji({ name: "cr", id: "1489177359318778020" })
+      .setLabel('CLAIM')
+      .setStyle(ButtonStyle.Primary)
   );
 
   const embed = new EmbedBuilder()
     .setColor('#2b2d31')
-    .setTitle('ASOSIASI PLENGER TempVoice')
-    .setDescription('Kelola voice kamu dengan tombol di bawah.');
+    .setTitle('⚡ TempVoice Control')
+    .setDescription(`Kelola voice kamu dengan tombol di bawah.
+
+🎤 Auto Create Room
+🧹 Auto Delete
+🧍 Owner System`);
 
   return { embed, components: [row, row2] };
 }
@@ -54,31 +80,42 @@ function getPanel() {
 client.once('ready', async () => {
   console.log(`Login sebagai ${client.user.tag}`);
 
-  const ch = await client.channels.fetch(PANEL_CHANNEL_ID);
-  const msgs = await ch.messages.fetch({ limit: 10 });
+  try {
+    const ch = await client.channels.fetch(PANEL_CHANNEL_ID);
+    const msgs = await ch.messages.fetch({ limit: 10 });
 
-  if (!msgs.find(m => m.author.id === client.user.id)) {
-    const panel = getPanel();
-    await ch.send({ embeds: [panel.embed], components: panel.components });
+    if (!msgs.find(m => m.author.id === client.user.id)) {
+      const panel = getPanel();
+      await ch.send({ embeds: [panel.embed], components: panel.components });
+      console.log("Panel dikirim ✅");
+    } else {
+      console.log("Panel sudah ada ✅");
+    }
+  } catch (err) {
+    console.log("Error panel:", err.message);
   }
 });
 
 // ===== TEMP VOICE =====
 client.on('voiceStateUpdate', async (oldState, newState) => {
 
-  // CREATE
+  // CREATE ROOM
   if (newState.channelId === TRIGGER_CHANNEL_ID) {
-    const vc = await newState.guild.channels.create({
-      name: `${newState.member.user.username}`,
-      type: ChannelType.GuildVoice,
-      parent: CATEGORY_ID
-    });
+    try {
+      const vc = await newState.guild.channels.create({
+        name: `${newState.member.user.username}`,
+        type: ChannelType.GuildVoice,
+        parent: CATEGORY_ID
+      });
 
-    owners.set(vc.id, newState.member.id);
-    await newState.setChannel(vc);
+      owners.set(vc.id, newState.member.id);
+      await newState.setChannel(vc);
+    } catch (err) {
+      console.log("Error create:", err.message);
+    }
   }
 
-  // DELETE (AMAN)
+  // DELETE ROOM (AMAN)
   if (!oldState.channel) return;
   if (oldState.channel.id === TRIGGER_CHANNEL_ID) return;
   if (oldState.channel.parentId !== CATEGORY_ID) return;
@@ -91,7 +128,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
   }, 3000);
 });
 
-// ===== BUTTON =====
+// ===== BUTTON HANDLER =====
 client.on('interactionCreate', async (i) => {
 
   if (!i.isButton()) return;
@@ -102,7 +139,6 @@ client.on('interactionCreate', async (i) => {
   if (owners.get(vc.id) !== i.user.id)
     return i.reply({ content: "Bukan room kamu ❌", ephemeral: true });
 
-  // ===== RENAME =====
   if (i.customId === 'name') {
     const modal = new ModalBuilder()
       .setCustomId('rename')
@@ -117,7 +153,6 @@ client.on('interactionCreate', async (i) => {
     return i.showModal(modal);
   }
 
-  // ===== LIMIT =====
   if (i.customId === 'limit') {
     const modal = new ModalBuilder()
       .setCustomId('limit')
@@ -132,25 +167,21 @@ client.on('interactionCreate', async (i) => {
     return i.showModal(modal);
   }
 
-  // ===== LOCK =====
   if (i.customId === 'lock') {
     await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: false });
     return i.reply({ content: "Room dikunci 🔒", ephemeral: true });
   }
 
-  // ===== UNLOCK =====
   if (i.customId === 'unlock') {
     await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: true });
     return i.reply({ content: "Room dibuka 🔓", ephemeral: true });
   }
 
-  // ===== REGION =====
   if (i.customId === 'region') {
-    await vc.setRTCRegion('singapore'); // bisa ganti
+    await vc.setRTCRegion('singapore');
     return i.reply({ content: "Region diubah 🌍", ephemeral: true });
   }
 
-  // ===== CLAIM =====
   if (i.customId === 'claim') {
     owners.set(vc.id, i.user.id);
     return i.reply({ content: "Sekarang kamu owner 👑", ephemeral: true });
