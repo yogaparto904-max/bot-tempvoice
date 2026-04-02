@@ -33,43 +33,37 @@ function getPanel() {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('name')
       .setEmoji({ name: "rn", id: "1489177109711818823" })
-      .setLabel('RENAME')
       .setStyle(ButtonStyle.Secondary),
 
     new ButtonBuilder().setCustomId('limit')
       .setEmoji({ name: "lim", id: "1489177299969380404" })
-      .setLabel('LIMIT')
       .setStyle(ButtonStyle.Secondary),
 
     new ButtonBuilder().setCustomId('lock')
       .setEmoji({ name: "lc", id: "1489177237277249536" })
-      .setLabel('LOCK')
       .setStyle(ButtonStyle.Secondary),
 
     new ButtonBuilder().setCustomId('unlock')
       .setEmoji({ name: "op", id: "1489177192490598430" })
-      .setLabel('UNLOCK')
       .setStyle(ButtonStyle.Secondary),
 
     new ButtonBuilder().setCustomId('region')
       .setEmoji({ name: "gl", id: "1489177019311984660" })
-      .setLabel('REGION')
       .setStyle(ButtonStyle.Secondary)
   );
 
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('claim')
       .setEmoji({ name: "cr", id: "1489177359318778020" })
-      .setLabel('CLAIM')
       .setStyle(ButtonStyle.Primary)
   );
 
   const embed = new EmbedBuilder()
     .setColor('#2b2d31')
     .setTitle('⚡ TempVoice Control')
-    .setDescription(`Kelola voice kamu dengan tombol di bawah.
+    .setDescription(`Gunakan tombol di bawah untuk kontrol room kamu.
 
-🎤 Auto Create Room
+🎤 Auto Room
 🧹 Auto Delete
 🧍 Owner System`);
 
