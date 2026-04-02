@@ -18,11 +18,11 @@ const client = new Client({
 });
 
 // ====== CONFIG ======
-const TRIGGER_CHANNEL_ID = "1489143518214754364";
+const TRIGGER_CHANNEL_ID = "1489151653658759238";
 const CATEGORY_ID = "1488141665578520616";
 const PANEL_CHANNEL_ID = "1489141959040696351";
 
-// ====== PANEL BUTTON ======
+// ====== PANEL ======
 function getPanel() {
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('name').setEmoji('🎚️').setLabel('NAME').setStyle(ButtonStyle.Secondary),
@@ -62,7 +62,6 @@ client.once('ready', async () => {
 
   const channel = await client.channels.fetch(PANEL_CHANNEL_ID);
 
-  // cek biar ga spam panel
   const messages = await channel.messages.fetch({ limit: 10 });
   const already = messages.find(m => m.author.id === client.user.id);
 
@@ -74,12 +73,14 @@ client.once('ready', async () => {
     });
     console.log("Panel dikirim 1x ✅");
   } else {
-    console.log("Panel sudah ada, skip kirim ulang ✅");
+    console.log("Panel sudah ada, skip ✅");
   }
 });
 
-// ====== TEMP VOICE ======
+// ====== TEMP VOICE FIX ======
 client.on('voiceStateUpdate', async (oldState, newState) => {
+
+  // CREATE ROOM
   if (newState.channelId === TRIGGER_CHANNEL_ID) {
     const channel = await newState.guild.channels.create({
       name: `${newState.member.user.username}`,
@@ -88,7 +89,10 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
       permissionOverwrites: [
         {
           id: newState.member.id,
-          allow: [PermissionsBitField.Flags.ManageChannels, PermissionsBitField.Flags.Connect]
+          allow: [
+            PermissionsBitField.Flags.ManageChannels,
+            PermissionsBitField.Flags.Connect
+          ]
         }
       ]
     });
@@ -96,10 +100,17 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     await newState.setChannel(channel);
   }
 
-  if (oldState.channel && oldState.channel.parentId === CATEGORY_ID) {
-    if (oldState.channel.members.size === 0) {
-      oldState.channel.delete().catch(() => {});
-    }
+  // DELETE ROOM (FIXED)
+  if (
+    oldState.channel &&
+    oldState.channel.parentId === CATEGORY_ID &&
+    oldState.channel.id !== TRIGGER_CHANNEL_ID
+  ) {
+    setTimeout(() => {
+      if (oldState.channel && oldState.channel.members.size === 0) {
+        oldState.channel.delete().catch(() => {});
+      }
+    }, 3000);
   }
 });
 
@@ -108,7 +119,7 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton()) return;
 
   await interaction.reply({
-    content: `Fitur **${interaction.customId}** belum diaktifkan 😎`,
+    content: `Fitur **${interaction.customId}** belum aktif 😎`,
     ephemeral: true
   });
 });
