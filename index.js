@@ -20,9 +20,9 @@ const client = new Client({
 });
 
 // ===== CONFIG =====
-const TRIGGER_CHANNEL_ID = "ISI_TRIGGER_ID";
-const CATEGORY_ID = "ISI_CATEGORY_ID";
-const PANEL_CHANNEL_ID = "ISI_PANEL_ID";
+const TRIGGER_CHANNEL_ID = "1489151653658759238";
+const CATEGORY_ID = "1488141665578520616";
+const PANEL_CHANNEL_ID = "1489141959040696351";
 
 // ===== DATABASE =====
 const owners = new Map();
