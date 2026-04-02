@@ -1,5 +1,4 @@
 require('dotenv').config();
-
 const {
   Client,
   GatewayIntentBits,
@@ -7,7 +6,8 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder
+  EmbedBuilder,
+  PermissionsBitField
 } = require('discord.js');
 
 const client = new Client({
@@ -17,137 +17,100 @@ const client = new Client({
   ]
 });
 
-// ⚠️ GANTI INI
-const CREATE_CHANNEL_ID = '1489143518214754364';
-const CATEGORY_ID = '1488141665578520616';
-const PANEL_CHANNEL_ID = '1489141959040696351';
+// ====== CONFIG ======
+const TRIGGER_CHANNEL_ID = "1489143518214754364";
+const CATEGORY_ID = "1488141665578520616";
+const PANEL_CHANNEL_ID = "1489141959040696351";
 
-const tempRooms = new Map();
-
-client.once('ready', async () => {
-  console.log(`🔥 Bot aktif sebagai ${client.user.tag}`);
-
-  const channel = await client.channels.fetch(PANEL_CHANNEL_ID);
-
-  // 🔍 CEK BIAR GA DOUBLE PANEL
-  const messages = await channel.messages.fetch({ limit: 10 });
-  const existing = messages.find(
-    m => m.author.id === client.user.id && m.embeds.length > 0
+// ====== PANEL BUTTON ======
+function getPanel() {
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('name').setEmoji('🎚️').setLabel('NAME').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('limit').setEmoji('👥').setLabel('LIMIT').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('privacy').setEmoji('🛡️').setLabel('PRIVACY').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('waiting').setEmoji('⏳').setLabel('WAITING R.').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('chat').setEmoji('💬').setLabel('CHAT').setStyle(ButtonStyle.Secondary)
   );
 
-  if (existing) {
-    console.log("⚠️ Panel sudah ada, skip kirim");
-    return;
-  }
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('trust').setEmoji('🟢').setLabel('TRUST').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('untrust').setEmoji('🔴').setLabel('UNTRUST').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('invite').setEmoji('📨').setLabel('INVITE').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('kick').setEmoji('📵').setLabel('KICK').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('region').setEmoji('🌍').setLabel('REGION').setStyle(ButtonStyle.Secondary)
+  );
 
-  // 🎛️ EMBED MIRIP GAMBAR
+  const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('block').setEmoji('🚫').setLabel('BLOCK').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('unblock').setEmoji('🔓').setLabel('UNBLOCK').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('claim').setEmoji('👑').setLabel('CLAIM').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('transfer').setEmoji('🔁').setLabel('TRANSFER').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('delete').setEmoji('🗑️').setLabel('DELETE').setStyle(ButtonStyle.Danger)
+  );
+
   const embed = new EmbedBuilder()
     .setColor('#2b2d31')
     .setTitle('TempVoice Interface')
-    .setDescription(`This interface can be used to manage temporary voice channels.
-More options are available with /voice commands.
+    .setDescription('Manage your temporary voice channel using buttons below.');
 
-Press the buttons below to use the interface`);
+  return { embed, components: [row1, row2, row3] };
+}
 
-  // 🔘 ROW 1
-  const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('name').setLabel('Name').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('limit').setLabel('Limit').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('privacy').setLabel('Privacy').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('waiting').setLabel('Waiting').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('chat').setLabel('Chat').setStyle(ButtonStyle.Secondary)
-  );
+// ====== READY ======
+client.once('ready', async () => {
+  console.log(`Login sebagai ${client.user.tag}`);
 
-  // 🔘 ROW 2
-  const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('trust').setLabel('Trust').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('untrust').setLabel('Untrust').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('invite').setLabel('Invite').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('kick').setLabel('Kick').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('region').setLabel('Region').setStyle(ButtonStyle.Secondary)
-  );
+  const channel = await client.channels.fetch(PANEL_CHANNEL_ID);
 
-  // 🔘 ROW 3
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('block').setLabel('Block').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('unblock').setLabel('Unblock').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('claim').setLabel('Claim').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('transfer').setLabel('Transfer').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('delete').setLabel('Delete').setStyle(ButtonStyle.Danger)
-  );
+  // cek biar ga spam panel
+  const messages = await channel.messages.fetch({ limit: 10 });
+  const already = messages.find(m => m.author.id === client.user.id);
 
-  await channel.send({
-    embeds: [embed],
-    components: [row1, row2, row3]
-  });
+  if (!already) {
+    const panel = getPanel();
+    await channel.send({
+      embeds: [panel.embed],
+      components: panel.components
+    });
+    console.log("Panel dikirim 1x ✅");
+  } else {
+    console.log("Panel sudah ada, skip kirim ulang ✅");
+  }
 });
 
-// 🎤 CREATE ROOM
+// ====== TEMP VOICE ======
 client.on('voiceStateUpdate', async (oldState, newState) => {
-  const member = newState.member;
-
-  if (newState.channelId === CREATE_CHANNEL_ID) {
+  if (newState.channelId === TRIGGER_CHANNEL_ID) {
     const channel = await newState.guild.channels.create({
-      name: `👑 ${member.user.username}`,
+      name: `${newState.member.user.username}`,
       type: ChannelType.GuildVoice,
-      parent: CATEGORY_ID
+      parent: CATEGORY_ID,
+      permissionOverwrites: [
+        {
+          id: newState.member.id,
+          allow: [PermissionsBitField.Flags.ManageChannels, PermissionsBitField.Flags.Connect]
+        }
+      ]
     });
 
-    tempRooms.set(channel.id, member.id);
-    await member.voice.setChannel(channel);
+    await newState.setChannel(channel);
   }
 
-  // 🧹 AUTO DELETE
-  if (oldState.channelId && tempRooms.has(oldState.channelId)) {
-    const channel = oldState.guild.channels.cache.get(oldState.channelId);
-    if (channel && channel.members.size === 0) {
-      tempRooms.delete(oldState.channelId);
-      await channel.delete();
+  if (oldState.channel && oldState.channel.parentId === CATEGORY_ID) {
+    if (oldState.channel.members.size === 0) {
+      oldState.channel.delete().catch(() => {});
     }
   }
 });
 
-// 🎛️ BUTTON HANDLER
+// ====== BUTTON HANDLER ======
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton()) return;
 
-  const vc = interaction.member.voice.channel;
-  if (!vc) {
-    return interaction.reply({ content: '❌ Masuk VC dulu!', ephemeral: true });
-  }
-
-  const ownerId = tempRooms.get(vc.id);
-  if (interaction.user.id !== ownerId) {
-    return interaction.reply({ content: '❌ Bukan room kamu!', ephemeral: true });
-  }
-
-  switch (interaction.customId) {
-    case 'lock':
-      await vc.permissionOverwrites.edit(vc.guild.id, { Connect: false });
-      return interaction.reply({ content: '🔒 Room dikunci', ephemeral: true });
-
-    case 'unlock':
-      await vc.permissionOverwrites.edit(vc.guild.id, { Connect: true });
-      return interaction.reply({ content: '🔓 Room dibuka', ephemeral: true });
-
-    case 'name':
-      await vc.setName(`✨ ${interaction.user.username}`);
-      return interaction.reply({ content: '✏️ Nama diubah', ephemeral: true });
-
-    case 'limit':
-      await vc.setUserLimit(2);
-      return interaction.reply({ content: '👥 Limit diubah', ephemeral: true });
-
-    case 'delete':
-      await vc.delete();
-      break;
-
-    default:
-      return interaction.reply({
-        content: '⚠️ Fitur ini belum diaktifkan',
-        ephemeral: true
-      });
-  }
+  await interaction.reply({
+    content: `Fitur **${interaction.customId}** belum diaktifkan 😎`,
+    ephemeral: true
+  });
 });
 
 client.login(process.env.TOKEN);
