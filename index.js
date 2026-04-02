@@ -27,6 +27,15 @@ const PANEL_CHANNEL_ID = "1489141959040696351";
 // ===== DATABASE =====
 const owners = new Map();
 
+// ===== EMBED RESPONSE =====
+function successEmbed(desc) {
+  return new EmbedBuilder()
+    .setColor('#2b2d31')
+    .setTitle('Updated!')
+    .setDescription(desc)
+    .setFooter({ text: "TempVoice System" });
+}
+
 // ===== PANEL =====
 function getPanel() {
   const row = new ActionRowBuilder().addComponents(
@@ -62,7 +71,7 @@ function getPanel() {
     .setAuthor({ name: "ASSPLR — Temporary Voice" })
     .setTitle('ASSPLR INTERFACE')
     .setDescription(`Gunakan tombol dibawah untuk mengatur voice anda.`)
-    .setImage("https://media.discordapp.net/attachments/1487590787284734143/1489196472720167022/image_3.png?ex=69cf89cb&is=69ce384b&hm=3bdad0fab2f2ac7f9a9266a57f34b0fb0d8d6af8d092a520b70ccfe51d3038bc&=&format=webp&quality=lossless") // GANTI LINK LU
+    .setImage("https://media.discordapp.net/attachments/1487590787284734143/1489196472720167022/image_3.png?ex=69cf89cb&is=69ce384b&hm=3bdad0fab2f2ac7f9a9266a57f34b0fb0d8d6af8d092a520b70ccfe51d3038bc&=&format=webp&quality=lossless") // GANTI
     .setFooter({ text: "ASSPLR PRESENT." });
 
   return { embed, components: [row, row2] };
@@ -72,16 +81,12 @@ function getPanel() {
 client.once('ready', async () => {
   console.log(`Login sebagai ${client.user.tag}`);
 
-  try {
-    const ch = await client.channels.fetch(PANEL_CHANNEL_ID);
-    const msgs = await ch.messages.fetch({ limit: 10 });
+  const ch = await client.channels.fetch(PANEL_CHANNEL_ID);
+  const msgs = await ch.messages.fetch({ limit: 10 });
 
-    if (!msgs.find(m => m.author.id === client.user.id)) {
-      const panel = getPanel();
-      await ch.send({ embeds: [panel.embed], components: panel.components });
-    }
-  } catch (err) {
-    console.log(err);
+  if (!msgs.find(m => m.author.id === client.user.id)) {
+    const panel = getPanel();
+    await ch.send({ embeds: [panel.embed], components: panel.components });
   }
 });
 
@@ -152,22 +157,22 @@ client.on('interactionCreate', async (i) => {
 
   if (i.customId === 'lock') {
     await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: false });
-    return i.reply({ content: "Room dikunci 🔒", ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Channel berhasil dikunci.`)], ephemeral: true });
   }
 
   if (i.customId === 'unlock') {
     await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: true });
-    return i.reply({ content: "Room dibuka 🔓", ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Channel berhasil dibuka.`)], ephemeral: true });
   }
 
   if (i.customId === 'region') {
     await vc.setRTCRegion('singapore');
-    return i.reply({ content: "Region diubah 🌍", ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Region berhasil diubah.`)], ephemeral: true });
   }
 
   if (i.customId === 'claim') {
     owners.set(vc.id, i.user.id);
-    return i.reply({ content: "Sekarang kamu owner 👑", ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Sekarang kamu adalah owner.`)], ephemeral: true });
   }
 });
 
@@ -182,13 +187,13 @@ client.on('interactionCreate', async (i) => {
   if (i.customId === 'rename') {
     const name = i.fields.getTextInputValue('nameInput');
     await vc.setName(name);
-    return i.reply({ content: "Nama diubah ✅", ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Nama channel diubah ke **${name}**.`)], ephemeral: true });
   }
 
   if (i.customId === 'limit') {
     const limit = parseInt(i.fields.getTextInputValue('limitInput'));
     await vc.setUserLimit(limit);
-    return i.reply({ content: "Limit di set ✅", ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`User limit sekarang **${limit}**.`)], ephemeral: true });
   }
 });
 
