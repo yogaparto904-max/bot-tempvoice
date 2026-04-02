@@ -18,8 +18,8 @@ const client = new Client({
 });
 
 // ⚠️ GANTI INI
-const CREATE_CHANNEL_ID = 'ISI_ID_CREATE_CHANNEL';
-const CATEGORY_ID = 'ISI_ID_CATEGORY';
+const CREATE_CHANNEL_ID = '1489141959040696351';
+const CATEGORY_ID = '1488141665578520616';
 
 // simpan owner room
 const tempRooms = new Map();
