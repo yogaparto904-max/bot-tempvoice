@@ -9,9 +9,7 @@ const {
   EmbedBuilder,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle,
-  PermissionFlagsBits,
-  StringSelectMenuBuilder
+  TextInputStyle
 } = require('discord.js');
 
 const client = new Client({
@@ -29,8 +27,8 @@ const PANEL_CHANNEL_ID = "1489141959040696351";
 // ===== DATABASE =====
 const owners = new Map();
 
-// ===== EMBED =====
-function ok(desc) {
+// ===== EMBED RESPONSE =====
+function successEmbed(desc) {
   return new EmbedBuilder()
     .setColor('#2b2d31')
     .setTitle('Updated!')
@@ -38,71 +36,45 @@ function ok(desc) {
     .setFooter({ text: "TempVoice System" });
 }
 
-// ===== BUTTON =====
-function btnCustom(id, emojiId){
-  return new ButtonBuilder()
-    .setCustomId(id)
-    .setEmoji({ id: emojiId })
-    .setStyle(ButtonStyle.Secondary);
-}
-
-function btnDefault(id, emoji){
-  return new ButtonBuilder()
-    .setCustomId(id)
-    .setEmoji(emoji)
-    .setStyle(ButtonStyle.Secondary);
-}
-
-// ===== PRIVACY DROPDOWN =====
-function privacyMenu(){
-  return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId('privacy_select')
-      .setPlaceholder('Setelan menu privasi')
-      .addOptions([
-        { label: 'Kunci', value: 'lock', emoji: '🔒' },
-        { label: 'Buka Kunci', value: 'unlock', emoji: '🔓' },
-        { label: 'Sembunyikan', value: 'hide', emoji: '🙈' },
-        { label: 'Tampilkan', value: 'show', emoji: '👁️' }
-      ])
-  );
-}
-
 // ===== PANEL =====
-function panel() {
+function getPanel() {
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('name')
+      .setEmoji({ name: "rn", id: "1489177109711818823" })
+      .setStyle(ButtonStyle.Secondary),
 
-  const row1 = new ActionRowBuilder().addComponents(
-    btnCustom('name','1489177109711818823'),
-    btnCustom('limit','1489177299969380404'),
-    btnDefault('waiting','⏱️'),
-    btnDefault('chat','💬')
+    new ButtonBuilder().setCustomId('limit')
+      .setEmoji({ name: "lim", id: "1489177299969380404" })
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder().setCustomId('lock')
+      .setEmoji({ name: "lc", id: "1489177237277249536" })
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder().setCustomId('unlock')
+      .setEmoji({ name: "op", id: "1489177192490598430" })
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder().setCustomId('region')
+      .setEmoji({ name: "gl", id: "1489177019311984660" })
+      .setStyle(ButtonStyle.Secondary)
   );
 
-  const row2 = privacyMenu();
-
-  const row3 = new ActionRowBuilder().addComponents(
-    btnDefault('trust','➕'),
-    btnDefault('untrust','➖'),
-    btnDefault('invite','📞'),
-    btnDefault('kick','📤'),
-    btnCustom('region','1489177019311984660')
-  );
-
-  const row4 = new ActionRowBuilder().addComponents(
-    btnDefault('block','🚫'),
-    btnDefault('unblock','⭕'),
-    btnCustom('claim','1489177359318778020'),
-    btnDefault('transfer','👑'),
-    btnDefault('delete','🗑️').setStyle(ButtonStyle.Danger)
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('claim')
+      .setEmoji({ name: "cr", id: "1489177359318778020" })
+      .setStyle(ButtonStyle.Primary)
   );
 
   const embed = new EmbedBuilder()
     .setColor('#2b2d31')
+    .setAuthor({ name: "ASSPLR — Temporary Voice" })
     .setTitle('ASSPLR INTERFACE')
-    .setDescription('Gunakan tombol dibawah untuk mengatur voice anda.')
+    .setDescription(`Gunakan tombol dibawah untuk mengatur voice anda.`)
+    .setImage("https://media.discordapp.net/attachments/1487590787284734143/1489196472720167022/image_3.png?ex=69cf89cb&is=69ce384b&hm=3bdad0fab2f2ac7f9a9266a57f34b0fb0d8d6af8d092a520b70ccfe51d3038bc&=&format=webp&quality=lossless") // GANTI
     .setFooter({ text: "ASSPLR PRESENT." });
 
-  return { embed, components:[row1,row2,row3,row4] };
+  return { embed, components: [row, row2] };
 }
 
 // ===== READY =====
@@ -113,172 +85,116 @@ client.once('ready', async () => {
   const msgs = await ch.messages.fetch({ limit: 10 });
 
   if (!msgs.find(m => m.author.id === client.user.id)) {
-    const p = panel();
-    await ch.send({ embeds:[p.embed], components:p.components });
+    const panel = getPanel();
+    await ch.send({ embeds: [panel.embed], components: panel.components });
   }
 });
 
 // ===== TEMP VOICE =====
-client.on('voiceStateUpdate', async (oldS, newS) => {
+client.on('voiceStateUpdate', async (oldState, newState) => {
 
-  if (newS.channelId === TRIGGER_CHANNEL_ID) {
-    const vc = await newS.guild.channels.create({
-      name: newS.member.user.username,
+  if (newState.channelId === TRIGGER_CHANNEL_ID) {
+    const vc = await newState.guild.channels.create({
+      name: `${newState.member.user.username}`,
       type: ChannelType.GuildVoice,
       parent: CATEGORY_ID
     });
 
-    owners.set(vc.id, newS.member.id);
-    await newS.setChannel(vc);
+    owners.set(vc.id, newState.member.id);
+    await newState.setChannel(vc);
   }
 
-  if (
-    oldS.channel &&
-    oldS.channel.parentId === CATEGORY_ID &&
-    oldS.channel.id !== TRIGGER_CHANNEL_ID &&
-    oldS.channel.members.size === 0
-  ) {
-    owners.delete(oldS.channel.id);
-    oldS.channel.delete().catch(() => {});
-  }
+  if (!oldState.channel) return;
+  if (oldState.channel.id === TRIGGER_CHANNEL_ID) return;
+  if (oldState.channel.parentId !== CATEGORY_ID) return;
+
+  setTimeout(() => {
+    if (oldState.channel && oldState.channel.members.size === 0) {
+      owners.delete(oldState.channel.id);
+      oldState.channel.delete().catch(() => {});
+    }
+  }, 3000);
 });
 
-// ===== INTERACTION =====
+// ===== BUTTON =====
 client.on('interactionCreate', async (i) => {
 
-  // ===== BUTTON =====
-  if (i.isButton()) {
+  if (!i.isButton()) return;
 
-    const vc = i.member.voice.channel;
-    if (!vc) return i.reply({ content: "Masuk VC dulu ❌", ephemeral: true });
+  const vc = i.member.voice.channel;
+  if (!vc) return i.reply({ content: "Masuk VC dulu ❌", ephemeral: true });
 
-    if (owners.get(vc.id) !== i.user.id)
-      return i.reply({ content: "Bukan room kamu ❌", ephemeral: true });
+  if (owners.get(vc.id) !== i.user.id)
+    return i.reply({ content: "Bukan room kamu ❌", ephemeral: true });
 
-    switch (i.customId) {
+  if (i.customId === 'name') {
+    const modal = new ModalBuilder()
+      .setCustomId('rename')
+      .setTitle('Rename VC');
 
-      case 'name':
-        return showModal(i,'rename','Nama Baru','nameInput');
+    const input = new TextInputBuilder()
+      .setCustomId('nameInput')
+      .setLabel('Nama Baru')
+      .setStyle(TextInputStyle.Short);
 
-      case 'limit':
-        return showModal(i,'limit','Limit User','limitInput');
-
-      case 'waiting':
-        await vc.setUserLimit(1);
-        return i.reply({ embeds:[ok('Waiting room aktif.')], ephemeral:true });
-
-      case 'chat':
-        return i.reply({ embeds:[ok('Chat dimatikan.')], ephemeral:true });
-
-      case 'trust':
-        return i.reply({ embeds:[ok('User ditrust.')], ephemeral:true });
-
-      case 'untrust':
-        return i.reply({ embeds:[ok('Trust dihapus.')], ephemeral:true });
-
-      case 'invite':
-        return i.reply({ embeds:[ok('Invite tersedia.')], ephemeral:true });
-
-      case 'kick':
-        vc.members.forEach(m => {
-          if (m.id !== i.user.id) m.voice.disconnect();
-        });
-        return i.reply({ embeds:[ok('Semua user di kick.')], ephemeral:true });
-
-      case 'region':
-        await vc.setRTCRegion('singapore');
-        return i.reply({ embeds:[ok('Region diubah.')], ephemeral:true });
-
-      case 'block':
-        return i.reply({ embeds:[ok('Channel diblock.')], ephemeral:true });
-
-      case 'unblock':
-        return i.reply({ embeds:[ok('Block dibuka.')], ephemeral:true });
-
-      case 'claim':
-        owners.set(vc.id, i.user.id);
-        return i.reply({ embeds:[ok('Sekarang kamu owner.')], ephemeral:true });
-
-      case 'transfer':
-        const member = vc.members.filter(m => m.id !== i.user.id).first();
-        if (member) {
-          owners.set(vc.id, member.id);
-          return i.reply({ embeds:[ok(`Owner dipindah ke ${member.user.username}`)], ephemeral:true });
-        }
-        return i.reply({ embeds:[ok('Tidak ada user lain.')], ephemeral:true });
-
-      case 'delete':
-        await vc.delete();
-        return;
-    }
+    modal.addComponents(new ActionRowBuilder().addComponents(input));
+    return i.showModal(modal);
   }
 
-  // ===== DROPDOWN =====
-  if (i.isStringSelectMenu()) {
+  if (i.customId === 'limit') {
+    const modal = new ModalBuilder()
+      .setCustomId('limit')
+      .setTitle('Set Limit');
 
-    const vc = i.member.voice.channel;
-    if (!vc) return i.reply({ content: "Masuk VC dulu ❌", ephemeral: true });
+    const input = new TextInputBuilder()
+      .setCustomId('limitInput')
+      .setLabel('Jumlah User')
+      .setStyle(TextInputStyle.Short);
 
-    if (owners.get(vc.id) !== i.user.id)
-      return i.reply({ content: "Bukan room kamu ❌", ephemeral: true });
-
-    const val = i.values[0];
-
-    switch(val){
-
-      case 'lock':
-        await vc.permissionOverwrites.edit(i.guild.id, { Connect: false });
-        return i.reply({ embeds:[ok('Channel dikunci 🔒')], ephemeral:true });
-
-      case 'unlock':
-        await vc.permissionOverwrites.edit(i.guild.id, { Connect: true });
-        return i.reply({ embeds:[ok('Channel dibuka 🔓')], ephemeral:true });
-
-      case 'hide':
-        await vc.permissionOverwrites.edit(i.guild.id, { ViewChannel: false });
-        return i.reply({ embeds:[ok('Channel disembunyikan 🙈')], ephemeral:true });
-
-      case 'show':
-        await vc.permissionOverwrites.edit(i.guild.id, { ViewChannel: true });
-        return i.reply({ embeds:[ok('Channel ditampilkan 👁️')], ephemeral:true });
-
-    }
+    modal.addComponents(new ActionRowBuilder().addComponents(input));
+    return i.showModal(modal);
   }
 
-  // ===== MODAL =====
-  if (i.isModalSubmit()) {
-
-    const vc = i.member.voice.channel;
-    if (!vc) return;
-
-    if (i.customId === 'rename') {
-      const name = i.fields.getTextInputValue('nameInput');
-      await vc.setName(name);
-      return i.reply({ embeds:[ok(`Nama diubah ke **${name}**`)], ephemeral:true });
-    }
-
-    if (i.customId === 'limit') {
-      const limit = parseInt(i.fields.getTextInputValue('limitInput'));
-      await vc.setUserLimit(limit);
-      return i.reply({ embeds:[ok(`Limit sekarang **${limit}**`)], ephemeral:true });
-    }
+  if (i.customId === 'lock') {
+    await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: false });
+    return i.reply({ embeds: [successEmbed(`Channel berhasil dikunci.`)], ephemeral: true });
   }
 
+  if (i.customId === 'unlock') {
+    await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: true });
+    return i.reply({ embeds: [successEmbed(`Channel berhasil dibuka.`)], ephemeral: true });
+  }
+
+  if (i.customId === 'region') {
+    await vc.setRTCRegion('singapore');
+    return i.reply({ embeds: [successEmbed(`Region berhasil diubah.`)], ephemeral: true });
+  }
+
+  if (i.customId === 'claim') {
+    owners.set(vc.id, i.user.id);
+    return i.reply({ embeds: [successEmbed(`Sekarang kamu adalah owner.`)], ephemeral: true });
+  }
 });
 
 // ===== MODAL =====
-function showModal(i, id, label, inputId) {
-  const modal = new ModalBuilder()
-    .setCustomId(id)
-    .setTitle(label);
+client.on('interactionCreate', async (i) => {
 
-  const input = new TextInputBuilder()
-    .setCustomId(inputId)
-    .setLabel(label)
-    .setStyle(TextInputStyle.Short);
+  if (!i.isModalSubmit()) return;
 
-  modal.addComponents(new ActionRowBuilder().addComponents(input));
-  i.showModal(modal);
-}
+  const vc = i.member.voice.channel;
+  if (!vc) return;
+
+  if (i.customId === 'rename') {
+    const name = i.fields.getTextInputValue('nameInput');
+    await vc.setName(name);
+    return i.reply({ embeds: [successEmbed(`Nama channel diubah ke **${name}**.`)], ephemeral: true });
+  }
+
+  if (i.customId === 'limit') {
+    const limit = parseInt(i.fields.getTextInputValue('limitInput'));
+    await vc.setUserLimit(limit);
+    return i.reply({ embeds: [successEmbed(`User limit sekarang **${limit}**.`)], ephemeral: true });
+  }
+});
 
 client.login(process.env.TOKEN);
