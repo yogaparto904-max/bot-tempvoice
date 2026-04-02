@@ -60,58 +60,66 @@ function getPanel() {
 client.once('ready', async () => {
   console.log(`Login sebagai ${client.user.tag}`);
 
-  const channel = await client.channels.fetch(PANEL_CHANNEL_ID);
+  try {
+    const channel = await client.channels.fetch(PANEL_CHANNEL_ID);
 
-  const messages = await channel.messages.fetch({ limit: 10 });
-  const already = messages.find(m => m.author.id === client.user.id);
+    const messages = await channel.messages.fetch({ limit: 10 });
+    const already = messages.find(m => m.author.id === client.user.id);
 
-  if (!already) {
-    const panel = getPanel();
-    await channel.send({
-      embeds: [panel.embed],
-      components: panel.components
-    });
-    console.log("Panel dikirim 1x ✅");
-  } else {
-    console.log("Panel sudah ada, skip ✅");
+    if (!already) {
+      const panel = getPanel();
+      await channel.send({
+        embeds: [panel.embed],
+        components: panel.components
+      });
+      console.log("Panel dikirim 1x ✅");
+    } else {
+      console.log("Panel sudah ada, skip ✅");
+    }
+  } catch (err) {
+    console.log("Gagal kirim panel:", err.message);
   }
 });
 
-// ====== TEMP VOICE FIX ======
+// ====== TEMP VOICE SYSTEM ======
 client.on('voiceStateUpdate', async (oldState, newState) => {
 
-  // CREATE ROOM
+  // ===== CREATE ROOM =====
   if (newState.channelId === TRIGGER_CHANNEL_ID) {
-    const channel = await newState.guild.channels.create({
-      name: `${newState.member.user.username}`,
-      type: ChannelType.GuildVoice,
-      parent: CATEGORY_ID,
-      permissionOverwrites: [
-        {
-          id: newState.member.id,
-          allow: [
-            PermissionsBitField.Flags.ManageChannels,
-            PermissionsBitField.Flags.Connect
-          ]
-        }
-      ]
-    });
+    try {
+      const channel = await newState.guild.channels.create({
+        name: `${newState.member.user.username}`,
+        type: ChannelType.GuildVoice,
+        parent: CATEGORY_ID,
+        permissionOverwrites: [
+          {
+            id: newState.member.id,
+            allow: [
+              PermissionsBitField.Flags.ManageChannels,
+              PermissionsBitField.Flags.Connect
+            ]
+          }
+        ]
+      });
 
-    await newState.setChannel(channel);
+      await newState.setChannel(channel);
+    } catch (err) {
+      console.log("Error create channel:", err.message);
+    }
   }
 
-  // DELETE ROOM (FIXED)
-  if (
-    oldState.channel &&
-    oldState.channel.parentId === CATEGORY_ID &&
-    oldState.channel.id !== TRIGGER_CHANNEL_ID
-  ) {
-    setTimeout(() => {
-      if (oldState.channel && oldState.channel.members.size === 0) {
-        oldState.channel.delete().catch(() => {});
-      }
-    }, 3000);
-  }
+  // ===== DELETE ROOM (SUPER AMAN) =====
+  if (!oldState.channel) return;
+
+  if (oldState.channel.id === TRIGGER_CHANNEL_ID) return;
+
+  if (oldState.channel.parentId !== CATEGORY_ID) return;
+
+  setTimeout(() => {
+    if (oldState.channel && oldState.channel.members.size === 0) {
+      oldState.channel.delete().catch(() => {});
+    }
+  }, 3000);
 });
 
 // ====== BUTTON HANDLER ======
@@ -124,4 +132,5 @@ client.on('interactionCreate', async (interaction) => {
   });
 });
 
+// ====== LOGIN ======
 client.login(process.env.TOKEN);
