@@ -7,7 +7,6 @@ const {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
-  PermissionsBitField,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle
@@ -21,9 +20,9 @@ const client = new Client({
 });
 
 // ===== CONFIG =====
-const TRIGGER_CHANNEL_ID = "1489151653658759238";
-const CATEGORY_ID = "1488141665578520616";
-const PANEL_CHANNEL_ID = "1489141959040696351";
+const TRIGGER_CHANNEL_ID = "ISI_TRIGGER_ID";
+const CATEGORY_ID = "ISI_CATEGORY_ID";
+const PANEL_CHANNEL_ID = "ISI_PANEL_ID";
 
 // ===== DATABASE =====
 const owners = new Map();
@@ -60,12 +59,11 @@ function getPanel() {
 
   const embed = new EmbedBuilder()
     .setColor('#2b2d31')
-    .setTitle('⚡ TempVoice Control')
-    .setDescription(`Gunakan tombol di bawah untuk kontrol room kamu.
-
-🎤 Auto Room
-🧹 Auto Delete
-🧍 Owner System`);
+    .setAuthor({ name: "ASSPLR — Temporary Voice" })
+    .setTitle('ASSPLR INTERFACE')
+    .setDescription(`Gunakan tombol dibawah untuk mengatur voice anda.`)
+    .setImage("https://media.discordapp.net/attachments/1487590787284734143/1489196472720167022/image_3.png?ex=69cf89cb&is=69ce384b&hm=3bdad0fab2f2ac7f9a9266a57f34b0fb0d8d6af8d092a520b70ccfe51d3038bc&=&format=webp&quality=lossless") // GANTI LINK LU
+    .setFooter({ text: "ASSPLR PRESENT." });
 
   return { embed, components: [row, row2] };
 }
@@ -81,35 +79,26 @@ client.once('ready', async () => {
     if (!msgs.find(m => m.author.id === client.user.id)) {
       const panel = getPanel();
       await ch.send({ embeds: [panel.embed], components: panel.components });
-      console.log("Panel dikirim ✅");
-    } else {
-      console.log("Panel sudah ada ✅");
     }
   } catch (err) {
-    console.log("Error panel:", err.message);
+    console.log(err);
   }
 });
 
 // ===== TEMP VOICE =====
 client.on('voiceStateUpdate', async (oldState, newState) => {
 
-  // CREATE ROOM
   if (newState.channelId === TRIGGER_CHANNEL_ID) {
-    try {
-      const vc = await newState.guild.channels.create({
-        name: `${newState.member.user.username}`,
-        type: ChannelType.GuildVoice,
-        parent: CATEGORY_ID
-      });
+    const vc = await newState.guild.channels.create({
+      name: `${newState.member.user.username}`,
+      type: ChannelType.GuildVoice,
+      parent: CATEGORY_ID
+    });
 
-      owners.set(vc.id, newState.member.id);
-      await newState.setChannel(vc);
-    } catch (err) {
-      console.log("Error create:", err.message);
-    }
+    owners.set(vc.id, newState.member.id);
+    await newState.setChannel(vc);
   }
 
-  // DELETE ROOM (AMAN)
   if (!oldState.channel) return;
   if (oldState.channel.id === TRIGGER_CHANNEL_ID) return;
   if (oldState.channel.parentId !== CATEGORY_ID) return;
@@ -122,7 +111,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
   }, 3000);
 });
 
-// ===== BUTTON HANDLER =====
+// ===== BUTTON =====
 client.on('interactionCreate', async (i) => {
 
   if (!i.isButton()) return;
