@@ -25,32 +25,27 @@ const TRIGGER_CHANNEL_ID = "1489151653658759238";
 const CATEGORY_ID = "1488141665578520616";
 const PANEL_CHANNEL_ID = "1489141959040696351";
 
-// ===== DATABASE SEDERHANA =====
+// ===== DATABASE =====
 const owners = new Map();
-const textChannels = new Map();
 
 // ===== PANEL =====
 function getPanel() {
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('name').setEmoji('🎚️').setLabel('NAME').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('name').setEmoji('🎚️').setLabel('RENAME').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('limit').setEmoji('👥').setLabel('LIMIT').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('lock').setEmoji('🔒').setLabel('LOCK').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('unlock').setEmoji('🔓').setLabel('UNLOCK').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('kick').setEmoji('📵').setLabel('KICK').setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId('region').setEmoji('🌍').setLabel('REGION').setStyle(ButtonStyle.Secondary)
   );
 
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('claim').setEmoji('👑').setLabel('CLAIM').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('transfer').setEmoji('🔁').setLabel('TRANSFER').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('block').setEmoji('🚫').setLabel('BLOCK').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('unblock').setEmoji('🔓').setLabel('UNBLOCK').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('delete').setEmoji('🗑️').setLabel('DELETE').setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId('claim').setEmoji('👑').setLabel('CLAIM').setStyle(ButtonStyle.Primary)
   );
 
   const embed = new EmbedBuilder()
     .setColor('#2b2d31')
-    .setTitle('TempVoice Ultimate')
-    .setDescription('Gunakan tombol untuk kontrol voice kamu.');
+    .setTitle('ASOSIASI PLENGER TempVoice')
+    .setDescription('Kelola voice kamu dengan tombol di bawah.');
 
   return { embed, components: [row, row2] };
 }
@@ -79,35 +74,18 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
       parent: CATEGORY_ID
     });
 
-    const txt = await newState.guild.channels.create({
-      name: `chat-${newState.member.user.username}`,
-      type: ChannelType.GuildText,
-      parent: CATEGORY_ID
-    });
-
     owners.set(vc.id, newState.member.id);
-    textChannels.set(vc.id, txt.id);
-
     await newState.setChannel(vc);
   }
 
-  // DELETE
+  // DELETE (AMAN)
   if (!oldState.channel) return;
   if (oldState.channel.id === TRIGGER_CHANNEL_ID) return;
   if (oldState.channel.parentId !== CATEGORY_ID) return;
 
-  setTimeout(async () => {
+  setTimeout(() => {
     if (oldState.channel && oldState.channel.members.size === 0) {
-
-      const txtId = textChannels.get(oldState.channel.id);
-      if (txtId) {
-        const txt = await oldState.guild.channels.fetch(txtId).catch(() => null);
-        if (txt) txt.delete().catch(() => {});
-      }
-
       owners.delete(oldState.channel.id);
-      textChannels.delete(oldState.channel.id);
-
       oldState.channel.delete().catch(() => {});
     }
   }, 3000);
@@ -131,7 +109,7 @@ client.on('interactionCreate', async (i) => {
       .setTitle('Rename VC');
 
     const input = new TextInputBuilder()
-      .setCustomId('name')
+      .setCustomId('nameInput')
       .setLabel('Nama Baru')
       .setStyle(TextInputStyle.Short);
 
@@ -143,7 +121,7 @@ client.on('interactionCreate', async (i) => {
   if (i.customId === 'limit') {
     const modal = new ModalBuilder()
       .setCustomId('limit')
-      .setTitle('Limit');
+      .setTitle('Set Limit');
 
     const input = new TextInputBuilder()
       .setCustomId('limitInput')
@@ -154,59 +132,28 @@ client.on('interactionCreate', async (i) => {
     return i.showModal(modal);
   }
 
-  // LOCK / UNLOCK
+  // ===== LOCK =====
   if (i.customId === 'lock') {
     await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: false });
     return i.reply({ content: "Room dikunci 🔒", ephemeral: true });
   }
 
+  // ===== UNLOCK =====
   if (i.customId === 'unlock') {
     await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: true });
     return i.reply({ content: "Room dibuka 🔓", ephemeral: true });
   }
 
-  // KICK
-  if (i.customId === 'kick') {
-    const member = vc.members.filter(m => m.id !== i.user.id).first();
-    if (!member) return i.reply({ content: "Ga ada orang ❌", ephemeral: true });
-
-    await member.voice.disconnect();
-    return i.reply({ content: "User di kick 🚫", ephemeral: true });
+  // ===== REGION =====
+  if (i.customId === 'region') {
+    await vc.setRTCRegion('singapore'); // bisa ganti
+    return i.reply({ content: "Region diubah 🌍", ephemeral: true });
   }
 
-  // CLAIM
+  // ===== CLAIM =====
   if (i.customId === 'claim') {
     owners.set(vc.id, i.user.id);
     return i.reply({ content: "Sekarang kamu owner 👑", ephemeral: true });
-  }
-
-  // DELETE
-  if (i.customId === 'delete') {
-    vc.delete();
-  }
-
-  // BLOCK
-  if (i.customId === 'block') {
-    const member = vc.members.filter(m => m.id !== i.user.id).first();
-    if (!member) return;
-
-    await vc.permissionOverwrites.edit(member.id, { Connect: false });
-    await member.voice.disconnect();
-    return i.reply({ content: "User diblock 🚫", ephemeral: true });
-  }
-
-  // UNBLOCK
-  if (i.customId === 'unblock') {
-    return i.reply({ content: "Unblock manual dulu 😎", ephemeral: true });
-  }
-
-  // TRANSFER
-  if (i.customId === 'transfer') {
-    const member = vc.members.filter(m => m.id !== i.user.id).first();
-    if (!member) return;
-
-    owners.set(vc.id, member.id);
-    return i.reply({ content: "Owner dipindah 🔁", ephemeral: true });
   }
 });
 
@@ -219,7 +166,7 @@ client.on('interactionCreate', async (i) => {
   if (!vc) return;
 
   if (i.customId === 'rename') {
-    const name = i.fields.getTextInputValue('name');
+    const name = i.fields.getTextInputValue('nameInput');
     await vc.setName(name);
     return i.reply({ content: "Nama diubah ✅", ephemeral: true });
   }
