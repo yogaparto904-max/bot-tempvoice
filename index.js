@@ -72,7 +72,7 @@ function getPanel(guild) {
 
   const embed = new EmbedBuilder()
     .setColor('#00b8b8')
-    .setAuthor({ name: "BETLEHEM — Temporary Voice" })
+    .setAuthor({ name: "BETLEHEM — Temporary Voice." })
     .setTitle('BETLEHEM INTERFACE')
     .setDescription(`Gunakan tombol dibawah untuk mengatur voice anda.`)
     .setImage("https://media.discordapp.net/attachments/1487590787284734143/1489196472720167022/image_3.png?ex=69cf89cb&is=69ce384b&hm=3bdad0fab2f2ac7f9a9266a57f34b0fb0d8d6af8d092a520b70ccfe51d3038bc&=&format=webp&quality=lossless")
