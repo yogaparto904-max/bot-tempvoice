@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const {
   Client,
   GatewayIntentBits,
@@ -28,16 +29,19 @@ const PANEL_CHANNEL_ID = "1489141959040696351";
 const owners = new Map();
 
 // ===== EMBED RESPONSE =====
-function successEmbed(desc) {
+function successEmbed(desc, guild) {
   return new EmbedBuilder()
     .setColor('#2b2d31')
     .setTitle('Updated!')
     .setDescription(desc)
-    .setFooter({ text: "TempVoice System" });
+    .setFooter({
+      text: "TempVoice System",
+      iconURL: guild?.iconURL({ dynamic: true })
+    });
 }
 
 // ===== PANEL =====
-function getPanel() {
+function getPanel(guild) {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('name')
       .setEmoji({ name: "rn", id: "1489177109711818823" })
@@ -67,12 +71,15 @@ function getPanel() {
   );
 
   const embed = new EmbedBuilder()
-    .setColor('#2b2d31')
-    .setAuthor({ name: "ASSPLR — Temporary Voice" })
-    .setTitle('ASSPLR INTERFACE')
+    .setColor('#00b8b8')
+    .setAuthor({ name: "BETLEHEM — Temporary Voice" })
+    .setTitle('BETLEHEM INTERFACE')
     .setDescription(`Gunakan tombol dibawah untuk mengatur voice anda.`)
-    .setImage("https://media.discordapp.net/attachments/1487590787284734143/1489196472720167022/image_3.png?ex=69cf89cb&is=69ce384b&hm=3bdad0fab2f2ac7f9a9266a57f34b0fb0d8d6af8d092a520b70ccfe51d3038bc&=&format=webp&quality=lossless") // GANTI
-    .setFooter({ text: "ASSPLR PRESENT." });
+    .setImage("https://media.discordapp.net/attachments/1487590787284734143/1489196472720167022/image_3.png?ex=69cf89cb&is=69ce384b&hm=3bdad0fab2f2ac7f9a9266a57f34b0fb0d8d6af8d092a520b70ccfe51d3038bc&=&format=webp&quality=lossless")
+    .setFooter({
+      text: "Copyright ©2018 - BTHL |•16/05/2025 15:35",
+      iconURL: guild?.iconURL({ dynamic: true })
+    });
 
   return { embed, components: [row, row2] };
 }
@@ -85,7 +92,7 @@ client.once('ready', async () => {
   const msgs = await ch.messages.fetch({ limit: 10 });
 
   if (!msgs.find(m => m.author.id === client.user.id)) {
-    const panel = getPanel();
+    const panel = getPanel(ch.guild);
     await ch.send({ embeds: [panel.embed], components: panel.components });
   }
 });
@@ -157,22 +164,22 @@ client.on('interactionCreate', async (i) => {
 
   if (i.customId === 'lock') {
     await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: false });
-    return i.reply({ embeds: [successEmbed(`Channel berhasil dikunci.`)], ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Channel berhasil dikunci.`, i.guild)], ephemeral: true });
   }
 
   if (i.customId === 'unlock') {
     await vc.permissionOverwrites.edit(i.guild.roles.everyone, { Connect: true });
-    return i.reply({ embeds: [successEmbed(`Channel berhasil dibuka.`)], ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Channel berhasil dibuka.`, i.guild)], ephemeral: true });
   }
 
   if (i.customId === 'region') {
     await vc.setRTCRegion('singapore');
-    return i.reply({ embeds: [successEmbed(`Region berhasil diubah.`)], ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Region berhasil diubah.`, i.guild)], ephemeral: true });
   }
 
   if (i.customId === 'claim') {
     owners.set(vc.id, i.user.id);
-    return i.reply({ embeds: [successEmbed(`Sekarang kamu adalah owner.`)], ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Sekarang kamu adalah owner.`, i.guild)], ephemeral: true });
   }
 });
 
@@ -187,13 +194,13 @@ client.on('interactionCreate', async (i) => {
   if (i.customId === 'rename') {
     const name = i.fields.getTextInputValue('nameInput');
     await vc.setName(name);
-    return i.reply({ embeds: [successEmbed(`Nama channel diubah ke **${name}**.`)], ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`Nama channel diubah ke **${name}**.`, i.guild)], ephemeral: true });
   }
 
   if (i.customId === 'limit') {
     const limit = parseInt(i.fields.getTextInputValue('limitInput'));
     await vc.setUserLimit(limit);
-    return i.reply({ embeds: [successEmbed(`User limit sekarang **${limit}**.`)], ephemeral: true });
+    return i.reply({ embeds: [successEmbed(`User limit sekarang **${limit}**.`, i.guild)], ephemeral: true });
   }
 });
 
