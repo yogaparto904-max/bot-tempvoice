@@ -13,6 +13,8 @@ const {
   TextInputStyle
 } = require('discord.js');
 
+const { joinVoiceChannel } = require('@discordjs/voice');
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -84,16 +86,37 @@ function getPanel(guild) {
   return { embed, components: [row, row2] };
 }
 
-// ===== READY =====
+// ===== READY + AUTO JOIN =====
 client.once('ready', async () => {
   console.log(`Login sebagai ${client.user.tag}`);
 
+  // PANEL
   const ch = await client.channels.fetch(PANEL_CHANNEL_ID);
   const msgs = await ch.messages.fetch({ limit: 10 });
 
   if (!msgs.find(m => m.author.id === client.user.id)) {
     const panel = getPanel(ch.guild);
     await ch.send({ embeds: [panel.embed], components: panel.components });
+  }
+
+  // AUTO JOIN VC
+  try {
+    const guild = client.guilds.cache.first();
+    if (!guild) return;
+
+    const channel = guild.channels.cache.get( "1488854856633680083" );
+    if (!channel) return;
+
+    joinVoiceChannel({
+      channelId: channel.id,
+      guildId: guild.id,
+      adapterCreator: guild.voiceAdapterCreator,
+      selfDeaf: false
+    });
+
+    console.log("Auto join VC aktif");
+  } catch (err) {
+    console.log("Gagal auto join:", err);
   }
 });
 
